@@ -1,17 +1,23 @@
 const { WebSocketServer } = require('ws');
+const http = require('http'); // 1. Import the built-in HTTP module
 
-// Render dynamically sets a PORT environment variable. We must listen on it.
 const port = process.env.PORT || 8080;
-const wss = new WebSocketServer({ port: port });
+
+// 2. Create a basic HTTP server that handles UptimeRobot pings
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Server is Alive!');
+});
+
+// 3. Attach the WebSocket server to our HTTP server
+const wss = new WebSocketServer({ server: server });
 
 wss.on('connection', (ws) => {
     console.log('A player connected.');
 
     ws.on('message', (message) => {
-        // Broadcast the data string/voice packet to all OTHER connected players
         wss.clients.forEach((client) => {
-            if (client !== ws && client.readyState === 1) { // 1 means OPEN
-                // Convert binary buffer back to string if necessary
+            if (client !== ws && client.readyState === 1) {
                 client.send(message.toString());
             }
         });
@@ -22,4 +28,7 @@ wss.on('connection', (ws) => {
     });
 });
 
-console.log(`TurboWarp server is running on port ${port}`);
+// Start listening on the combined port
+server.listen(port, () => {
+    console.log(`TurboWarp server is running on port ${port}`);
+});
